@@ -24,6 +24,29 @@ Pi 的实验性上下文管理扩展不在本次 WM 关闭适配范围内，请�
 
 新的序列化始终包含 WM 布尔值。新的队列快照包含 `memory_policy_version: 1`。没有版本号的旧队列/恢复快照，在缺少 WM 字段时仍沿用提交时的 WM=true 语义，因此这些已提交的任务在升级后仍可能生成摘要。这不会把已保存的用户/会话策略标记为已开启。如果不能接受升级后仍有 WM 生成，请在升级前先排空旧任务。
 
+## 将 WM 设为服务端默认开启
+
+如需为没有自身策略的会话开启 WM，请在 `ov.conf` 的 `server.user_config_defaults` 下设置服务端默认值：
+
+```json
+{
+  "server": {
+    "user_config_defaults": {
+      "memory_policy": {
+        "working_memory": { "enabled": true }
+      }
+    }
+  }
+}
+```
+
+- `memory_policy` 只在 `server.user_config_defaults` 下生效。写在顶层的 `memory_policy` 会被忽略，启动时只会输出警告 `Ignoring unknown config field 'memory_policy'`。
+- `ov.conf` 只在启动时读取，修改后需要重启服务端。
+- 只有会话和用户都没有显式策略时才使用该默认值。由于策略按整份选择，已保存的用户或会话策略如果没有 `working_memory.enabled: true`，WM 仍然关闭。请在该策略中开启（用户策略可通过 `PATCH /api/v1/admin/accounts/{account_id}/users/{user_id}/settings` 修改，无需重启），或在 commit 时传入 `enable_working_memory`。
+- 未填写的字段保持默认：`self` 和 `peer` 保持开启，允许所有已启用的记忆类型。
+
+其他 `user_config_defaults` 字段见[配置指南](01-configuration.md)。
+
 ## 按次显式生成
 
 `POST /api/v1/sessions/{id}/commit` 接受 `enable_working_memory`：

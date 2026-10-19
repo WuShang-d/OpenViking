@@ -47,6 +47,37 @@ Such already-submitted tasks can still generate a summary after upgrade. This
 does not mark saved user/session policies as opted in. Drain old tasks before
 upgrade if no post-upgrade WM generation is acceptable.
 
+## Enable WM as the server default
+
+To enable WM for sessions without their own policy, set the server default in
+`ov.conf` under `server.user_config_defaults`:
+
+```json
+{
+  "server": {
+    "user_config_defaults": {
+      "memory_policy": {
+        "working_memory": { "enabled": true }
+      }
+    }
+  }
+}
+```
+
+- `memory_policy` is read only under `server.user_config_defaults`. A top-level
+  `memory_policy` block is ignored, and startup logs only the warning
+  `Ignoring unknown config field 'memory_policy'`.
+- `ov.conf` is read at startup. Restart the server after editing it.
+- The default applies only when neither the session nor the user has an explicit
+  policy. Because a whole policy is selected, a saved user or session policy
+  without `working_memory.enabled: true` keeps WM off. Enable it in that policy,
+  for a user through `PATCH /api/v1/admin/accounts/{account_id}/users/{user_id}/settings`
+  without a restart, or pass `enable_working_memory` on the commit.
+- Omitted fields keep their defaults: `self` and `peer` stay enabled, and all
+  enabled memory types are allowed.
+
+See [Configuration](01-configuration.md) for the other `user_config_defaults` fields.
+
 ## Explicit per-commit generation
 
 `POST /api/v1/sessions/{id}/commit` accepts `enable_working_memory`:
